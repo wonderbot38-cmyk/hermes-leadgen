@@ -1,0 +1,21 @@
+# secrets
+.env
+airtable.env
+*.env
+google_client_secret.json
+google_token.json
+**/google_token.json
+
+# runtime
+leads.db
+*.db
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.DS_Store
+
+# local caches
+.cache/
+*.log
