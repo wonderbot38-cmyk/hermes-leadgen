@@ -1,25 +1,40 @@
 # Hermes Lead-Gen Platform
 
-Local outreach automation + dashboard.
+Local outreach automation + dashboard for clinic lead generation.
 
 ## Pipeline
 
 ```
-Apify (leads)
-  → Snov (find + verify email)
-  → Linkup (personalize)
+Apify (lead discovery)
+  → Snov (email find + verify)
+  → Linkup (personalization)
   → Draft + Google Drive media link
   → Gmail send (max 100/day)
   → Airtable CRM
   → Reply check every 4 hours
 ```
 
+## Requirements
+
+You need active accounts and API credentials for:
+
+| Service | Purpose |
+|---------|---------|
+| **Apify** | Lead discovery / Maps scraping |
+| **Snov.io** | Email finding and verification |
+| **Linkup** | Personalization research |
+| **Gmail** | Outbound email sending (App Password) |
+| **Google Drive** | Hosted media link used in emails |
+| **Airtable** | CRM storage |
+
+Create an Apify account, fund it as needed for actor runs, and add your `APIFY_TOKEN` in `.env` or the dashboard **APIs** tab. The same applies to Snov, Linkup, Gmail, Drive, and Airtable — configure each service before running the pipeline.
+
 ## Quick start
 
 ```bash
 cd leadgen
 cp .env.example .env
-# fill keys in .env OR start the app and use the APIs tab
+# add your API keys to .env, or start the app and use the APIs tab
 
 ./start.sh
 # open http://localhost:8731
@@ -38,7 +53,7 @@ pip install fastapi uvicorn
 | **Pipeline** | Run scrape / manual lead / reply check |
 | **Leads** | Table + send drafted emails |
 | **APIs** | Edit API keys without code |
-| **Usage** | Snov balance, send caps, connection status |
+| **Usage** | Balances, send caps, connection status |
 
 ## Important files
 
@@ -49,6 +64,7 @@ pip install fastapi uvicorn
 | `airtable_crm.py` | Airtable helper |
 | `start.sh` | Start server |
 | `.env` | Secrets (not committed) |
+| `.env.example` | Key template |
 
 ## Safety
 
@@ -58,6 +74,6 @@ pip install fastapi uvicorn
 
 ## Notes
 
-- Apify needs account credit for Maps scrapes
-- If Apify is empty, use **Manual lead** on the dashboard
+- Configure Apify, Snov, Linkup, Gmail, Drive, and Airtable before production runs
+- Manual lead is available when you already have a clinic name + website
 - Reply watcher runs every 4 hours while the server is up

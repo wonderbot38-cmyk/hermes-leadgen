@@ -785,7 +785,7 @@ def run_manual_lead(
     address: str = "",
     dry_run: bool = True,
 ) -> dict:
-    """Skip Apify — process one known lead (for zero-credit testing)."""
+    """Process one known lead by name + website (does not run Apify scrape)."""
     drive_link = cfg("DRIVE_LINK", DRIVE_DEFAULT)
     place = {
         "title": name,

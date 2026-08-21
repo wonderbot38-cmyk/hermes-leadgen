@@ -1,7 +1,6 @@
 """
 Hermes Lead-Gen Platform — FastAPI dashboard + API
-Tabs: Pipeline | Leads | APIs | Usage
-Keys editable from UI without agent help.
+Real-data-only dashboard with leads, usage, and API key management.
 """
 from __future__ import annotations
 
@@ -99,7 +98,6 @@ def _mask(val: str) -> str:
     if not val:
         return ""
     if "@" in val and "." in val and " " not in val:
-        # email — show full (needed to know which gmail)
         return val
     if val.startswith("http"):
         return val
@@ -579,7 +577,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
   <div class="grid" id="stats"></div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="pipeline">Pipeline</button>
+    <button class="tab active" data-tab="pipeline">Outreach</button>
     <button class="tab" data-tab="leads">Leads</button>
     <button class="tab" data-tab="apis">APIs</button>
     <button class="tab" data-tab="usage">Usage</button>
@@ -598,11 +596,11 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
         <button class="secondary" id="btnRefresh">Refresh</button>
         <button class="secondary" id="btnReplies">Check replies</button>
       </div>
-      <p class="muted" style="margin:10px 0 0">If Apify has $0 credit, use Manual lead. Dry run drafts only — uncheck to send (max 100/day).</p>
+      <p class="muted" style="margin:10px 0 0">Configure Apify, Snov, Linkup, Gmail, Drive, and Airtable in the APIs tab before running. Dry run drafts only — uncheck to send (max 100/day).</p>
     </div>
 
     <div class="card">
-      <h2>Manual lead (skip Apify)</h2>
+      <h2>Manual lead</h2>
       <div class="row">
         <label>Name<input id="mName" type="text" placeholder="Clinic name"></label>
         <label>Website<input id="mWeb" type="text" placeholder="https://clinic.ie"></label>
@@ -614,7 +612,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
     </div>
 
     <div class="card">
-      <h2>Activity</h2>
+      <h2>Live outreach activity</h2>
       <div class="log" id="log">ready.</div>
     </div>
   </section>
@@ -623,14 +621,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
   <section id="tab-leads" class="hidden">
     <div class="card" style="padding:0;overflow:auto">
       <div style="padding:16px 16px 0;display:flex;justify-content:space-between;align-items:center">
-        <h2 style="margin:0">All leads</h2>
+        <h2 style="margin:0">Outreach queue</h2>
         <button class="secondary small" id="btnRefresh2">Refresh</button>
       </div>
       <table>
         <thead><tr>
-          <th>#</th><th>Name</th><th>Email</th><th>Valid</th><th>Stage</th><th>Reply</th><th>Subject</th><th></th>
+          <th>#</th><th>Clinic</th><th>Email</th><th>Email status</th><th>Stage</th><th></th>
         </tr></thead>
-        <tbody id="rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        <tbody id="rows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -668,7 +666,7 @@ let busy = false;
 
 function showErr(m){ const e=$('err'); if(!m){e.style.display='none';e.textContent='';return;} e.style.display='block'; e.textContent=m; }
 function showOk(m){ const e=$('okmsg'); if(!m){e.style.display='none';e.textContent='';return;} e.style.display='block'; e.textContent=m; setTimeout(()=>showOk(''), 4000); }
-function log(m){ const el=$('log'); el.textContent += '\n'+m; el.scrollTop = el.scrollHeight; }
+function log(m){ const el=$('log'); el.textContent += '\\n'+m; el.scrollTop = el.scrollHeight; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 async function api(path, opts){
@@ -699,13 +697,15 @@ function badge(s){ return `<span class="badge b-${esc(s||'found')}">${esc(s||'-'
 function renderStats(s){
   if(!s || s.error){ return; }
   const st = s.stages||{};
+  const replies = s.replies || {};
+  const replied = replies.replied || 0;
   const items=[
     ['Total', s.total||0],
     ['Sent today', `${s.sent_today||0}/${s.daily_cap||100}`],
     ['Left today', s.remaining_today??0],
     ['Drafted', st.drafted||0],
     ['Sent', st.sent||0],
-    ['Replied', ((s.replies||{}).replied||0)+((s.replies||{}).interested||0)],
+    ['Replied', replied],
   ];
   $('stats').innerHTML = items.map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
 }
@@ -713,19 +713,17 @@ function renderStats(s){
 function renderLeads(payload){
   const leads = (payload&&payload.leads)||[];
   if(!leads.length){
-    $('rows').innerHTML = `<tr><td colspan="8" class="empty">No leads yet</td></tr>`;
+    $('rows').innerHTML = `<tr><td colspan="6" class="empty">No leads yet</td></tr>`;
     return;
   }
   $('rows').innerHTML = leads.map(r=>`<tr>
     <td>${r.id}</td>
     <td><strong>${esc(r.name||'')}</strong><div class="muted">${esc(r.address||'')}</div>
-      ${r.website?`<div class="muted"><a href="${esc(r.website)}" target="_blank">${esc((r.website||'').replace(/^https?:\/\//,''))}</a></div>`:''}
+      ${r.website?`<div class="muted"><a href="${esc(r.website)}" target="_blank">${esc((r.website||'').replace(/^https?:\\/\\//,''))}</a></div>`:''}
     </td>
     <td class="mono">${esc(r.email||'')}</td>
     <td>${esc(r.email_valid||'-')}</td>
     <td>${badge(r.stage)}</td>
-    <td>${esc(r.reply_status||'none')}</td>
-    <td>${esc(r.subject||'')}</td>
     <td>${r.stage==='drafted'&&r.email?`<button class="secondary small" onclick="sendOne(${r.id})">Send</button>`:''}</td>
   </tr>`).join('');
 }
@@ -739,9 +737,6 @@ function renderHealth(h){
   $('dot').className='dot on';
   $('live').textContent = 'online · '+(h.time||'');
   const j=h.jobs||{};
-  if(j.log && j.log.length){
-    // merge server log lines not already shown — just show last few in activity when refreshing
-  }
   if(j.last_error) showErr(j.last_error);
   if(j.pipeline_running) log('… pipeline still running');
 }
@@ -752,8 +747,7 @@ async function refresh(){
   renderStats(s);
   renderLeads(l);
   if(h && h.jobs && h.jobs.log){
-    // update log with server lines
-    const serverLog = h.jobs.log.slice(-15).join('\n');
+    const serverLog = h.jobs.log.slice(-15).join('\\n');
     if(serverLog) {
       // don't wipe user logs entirely — append marker
     }
@@ -830,7 +824,7 @@ async function loadUsage(){
   $('usageGrid').innerHTML = `
     <div class="usage-card"><h3>Email sends today</h3><div class="big">${sends.today||0} / ${sends.cap||100}</div><div class="muted">${sends.remaining||0} remaining</div></div>
     <div class="usage-card"><h3>Snov credits</h3><div class="big">${esc(snovBal)}</div><div class="muted">${snov.ok===false?'check key':('resets/expires in '+(snovData.expires_in||snovData.limit_resets_in||'—')+' days')}</div></div>
-    <div class="usage-card"><h3>Apify</h3><div class="big">${apify.ok?'Connected':'—'}</div><div class="muted">${esc(apify.username||apify.error||'top up in Apify console if scrape fails')}</div></div>
+    <div class="usage-card"><h3>Apify</h3><div class="big">${apify.ok?'Connected':'—'}</div><div class="muted">${esc(apify.username||apify.error||'configure APIFY_TOKEN in APIs tab')}</div></div>
     <div class="usage-card"><h3>Leads in DB</h3><div class="big">${leads.total||0}</div><div class="muted">drafted ${(leads.stages||{}).drafted||0} · sent ${(leads.stages||{}).sent||0}</div></div>
     <div class="usage-card"><h3>Airtable</h3><div class="big">${air.ok?'OK':'—'}</div><div class="muted">local leads ${air.local_leads||0}<br><span class="mono">${esc(air.base_id||'')}</span></div></div>
     <div class="usage-card"><h3>Linkup</h3><div class="big">Active</div><div class="muted">${esc((u.linkup||{}).note||'per-search billing')}</div></div>
